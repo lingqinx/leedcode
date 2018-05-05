@@ -1,4 +1,6 @@
-import queue  
+# encoding: UTF-8
+# 总结出tree：操作与递归分开，一般先操作，再循环
+import Queue  
   
 class Node:  
     def __init__(self,value=None,left=None,right=None):  
@@ -12,14 +14,14 @@ def treeDepth(tree):
     leftDepth=treeDepth(tree.left)  
     rightDepth=treeDepth(tree.right)  
     if leftDepth>rightDepth:  
-        return leftDepth+1  
+        return leftDepth+1  #add one every recursive
     if rightDepth>=leftDepth:  
         return rightDepth+1  
   
 def treeWidth(tree):  
     curwidth=1  
     maxwidth=0  
-    q=queue.Queue()  
+    q=Queue.Queue()  
     q.put(tree)  
     while not q.empty():  
         n=curwidth  

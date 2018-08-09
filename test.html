@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang='en'>
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+                <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+                    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+                        </head>
+    <body>
+        <div class="cont">
+            <div class="col-lg-12 col-md-12 col-sm-12" id="graph">
+            </div>
+        </div>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+        <script src="https://code.highcharts.com/stock/highstock.js"></script>
+        <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
+        <script>
+            
+            $(function(){drawPrice("MACD", "aapl"); });
+            function drawPrice(IndicatorId,symbol) {
+                var params = renderChartJson(symbol);
+                $.ajax({
+                       beforeSend:function(){
+                       $("#graph").text("Loading graph...");
+                       },
+                       data: {parameters: encodeURIComponent(params)},
+                       url: 'https://www.alphavantage.co/query?function='+IndicatorId+'&symbol='+symbol +'&interval=15min&time_period=10&series_type=close&apikey=QCK6O0TDD595BLVW',
+                       type: 'GET',
+                       success: function(data){
+                       $("#graph").empty();
+                       //alert("2");
+                       //$("#graph").text(data);
+                       drawChart(IndicatorId, data, symbol);
+                       },
+                       error: function(response,txtStatus){
+                       console.log(response,txtStatus)
+                       }
+                       });
+            }
+        
+        function renderChartJson(symbol) {
+            var text = '{"Normalized": false, "NumberOfDays": 1000, "DataPeriod": "Day", "Elements": [{"Symbol": "'+symbol+'", "Type": "price", "Params": ["ohlc"]}]}';
+            $("#graph").text(text);
+            return text;
+        }
+        
+        function drawChart(IndicatorId,jsonObj,symbol) {
+          var TechAna="Technical Analysis: "+IndicatorId;
+            var DateArray = new Array();
+            for ( var DateTime in jsonObj[TechAna]){
+                DateArray.push(DateTime);
+            }
+            //console.log(DateArray);
+            var times = new Array();
+            for(var i = 0; i<131;i++){
+                var x = "";
+                x = DateArray[i].substring(5,7)+"/"+DateArray[i].substring(8,10);
+                times.push(x);
+            }
+            var DATAArray=new Array();
+
+            if(IndicatorId == 'STOCH'){
+                var TitleText = 'Stochastic Oscillator (STOCH)';
+                //alert(TitleText);
+                var SeriesName = symbol +' SlowK';
+                var Interval = 10;
+                var DATAArrayD=new Array();
+                for (var i=0;i<131;i++){
+                    DATAArray.push(parseFloat(jsonObj[TechAna][DateArray[i]]["SlowK"]));
+                    DATAArrayD.push(parseFloat(jsonObj[TechAna][DateArray[i]]["SlowD"]));
+                }
+                
+            }
+            else if(IndicatorId == 'BBANDS'){
+                var TitleText = jsonObj["Meta Data"]["2: Indicator"];
+                var SeriesName = symbol +' Real Middle Band';
+                var Interval = 20;
+                var DATAArrayU=new Array();
+                var DATAArrayL=new Array();
+                for (var i=0;i<131;i++){
+                    DATAArray.push(parseFloat(jsonObj[TechAna][DateArray[i]]["Real Middle Band"]));
+                    DATAArrayU.push(parseFloat(jsonObj[TechAna][DateArray[i]]["Real Upper Band"]));
+                    DATAArrayL.push(parseFloat(jsonObj[TechAna][DateArray[i]]["Real Lower Band"]));
+                }
+            }
+            else if(IndicatorId == 'MACD'){
+                var TitleText = jsonObj["Meta Data"]["2: Indicator"];
+                var SeriesName = symbol +' MACD';
+                var Interval = 2;
+                var DATAArrayH=new Array();
+                var DATAArrayS=new Array();
+                for (var i=0;i<131;i++){
+                    DATAArray.push(parseFloat(jsonObj[TechAna][DateArray[i]]["MACD"]));
+                    DATAArrayH.push(parseFloat(jsonObj[TechAna][DateArray[i]]["MACD_Signal"]));
+                    DATAArrayS.push(parseFloat(jsonObj[TechAna][DateArray[i]]["MACD_Hist"]));
+                }
+            }
+            else{
+                var TitleText = jsonObj["Meta Data"]["2: Indicator"];
+                var SeriesName = symbol;
+                for (var i=0;i<131;i++){
+                    DATAArray.push(parseFloat(jsonObj[TechAna][DateArray[i]][IndicatorId]));
+                }
+            }
+           var Chart = Highcharts.chart('graph',{
+               title: {
+                        text: TitleText
+                    },
+                    subtitle: {
+                        text: '<a href="https://www.alphavantage.co/">Source: Alpha Vantage</a>'
+                    },
+                    xAxis: {
+                        categories: times,
+                        reversed: true,
+                        tickInterval: 15,
+                        showLastLabel: true,
+                    },
+                    yAxis: {
+                        title: {
+                            text: IndicatorId
+                        },
+                        
+                    },
+                    
+                    plotOptions: {
+                        line:{
+                            marker: {//dot
+                                enabled:false,
+                                radius: 2,
+                                symbol:  'square'
+                            },
+                            lineWidth: 2,
+                          },  
+                    },
+                    series: [{
+                        name: SeriesName,
+                        data: DATAArray,
+
+                    }],                               
+           });
+
+           if(IndicatorId == 'STOCH'){
+		        Chart.addSeries({
+		            name: symbol + ' SlowK',
+		            data: DATAArrayD,
+
+		        });
+		    }
+		    else if(IndicatorId == 'BBANDS'){
+		        Chart.addSeries({
+		            name: symbol + ' Real Upper Band',
+		            data: DATAArrayU,
+
+		        });
+		        Chart.addSeries({
+		            name: symbol + ' Real Lower Band',
+		            data: DATAArrayL,
+
+		        });
+		    }
+		    else if(IndicatorId == 'MACD'){
+		        Chart.addSeries({
+		            name: symbol + ' MACD_Hist',
+		            data: DATAArrayH,
+
+		        });
+		        Chart.addSeries({
+		            name: symbol + ' MACD_Signal',
+		            data: DATAArrayS,
+
+		        });
+		    }
+          
+}
+        </script>
+    </body>
+</html>
+
